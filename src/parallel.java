@@ -4,54 +4,47 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class parallel {
-    private static final long N = 50;
+    private static final long N = 1000000;
 
     private static void executeInThreads(int threads) throws InterruptedException {
         final ExecutorService threadPool = Executors.newFixedThreadPool(threads);
         long start = System.currentTimeMillis();
-        for (long i = 1; i <= N; i++) {
-            threadPool.execute(new ParallelTask(i));
+        final AtomicLong sum = new AtomicLong(0);
+        int workPerThread = (int) (N / threads);
+        final int[] startI = new int[threads];
+        final int[] endI = new int[threads];
+        for (int i = 0; i < threads; i++) {
+            startI[i] = i * workPerThread;
+            endI[i] = (i + 1) * workPerThread;
         }
+        startI[0] = 1;
+        for (int i = 1; i <= threads; i++) {
+
+            int finalI = i-1;
+            threadPool.submit(new Runnable() {
+                @Override
+                public void run() {
+                    for (int j = startI[finalI]; j < endI[finalI]; j++) {
+                        if (isPrime(j)) {
+                            sum.incrementAndGet();
+                        }
+                    }
+
+
+                }
+
+            });
+
+        }
+
+
         threadPool.shutdown();
         threadPool.awaitTermination(1, TimeUnit.DAYS);
         System.out.println("Time: " + (System.currentTimeMillis()- start) + " ms");
-        System.out.println("Threads: " + threads + " Primes: " +  ParallelTask.getPrimes());
-        ParallelTask.resetPrimes();
-    }
-    private static class ParallelTask implements Runnable {
-
-
-        private static final AtomicLong countPrimes = new AtomicLong();
-
-
-        private final long number;
-
-
-        public ParallelTask(long number) {
-            this.number = number;
-        }
-
-
-        public static long getPrimes() {
-            return countPrimes.get();
-        }
-
-
-        public static void resetPrimes() {
-            countPrimes.set(0);
-        }
-
-
-        @Override
-        public void run() {
-
-            if (isPrime(this.number)) {
-                countPrimes.getAndIncrement();
-            }
-
-        }
+        System.out.println("Threads: " + threads + " Primes: " +  sum.get());
 
     }
+
 
 
     public static boolean isPrime(long n) {
@@ -77,7 +70,7 @@ public class parallel {
     }
 
     public static void main(String[] args) throws InterruptedException {
-        executeInThreads(3);
+        executeInThreads(12);
     }
 
 
